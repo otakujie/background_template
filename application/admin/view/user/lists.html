@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>{:lang('user_list')}</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="__STATIC__/admin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="__STATIC__/admin/style/admin.css" media="all">
+    <style>
+        .wechat_cross_btn_group {
+            margin-left: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="layui-fluid">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">{:lang('user_list')}</div>
+                <div class="layui-btn-group wechat_cross_btn_group">
+                    <button class="layui-btn layui-btn-sm" id="add_btn"
+                            lay-href="{:url('user/add',['do_uid' => '__DO__','access_token'=>'__TOKEN__'])}"
+                            lay-text="{:lang('add')}">
+                        <i class="layui-icon">&#xe654;</i>{:lang('add')}
+                    </button>
+                </div>
+                <div class="layui-card-body">
+                    <table class="layui-hide" id="mechanism_list" lay-filter="user_list"></table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--({{ d.u_child_count }})-->
+<script type="text/html" id="do">
+    {{# if(d.all_display === '4') { }}
+    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="Reset_key">{:lang('Reset_key')}</a>
+    {{# }else if(d.all_display === '3'){  }}
+    <a class="layui-btn layui-btn-xs layui-btn-warm" lay-event="Reset_key">{:lang('Reset_key')}</a>
+    {{# } }}
+    <a class="layui-btn layui-btn-xs" lay-event="edit">{:lang('edi')}</a>
+    <a class="layui-btn layui-btn-xs layui-btn-danger" lay-event="del">{:lang('delete')}</a>
+</script>
+
+<script src="__STATIC__/admin/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: '__STATIC__/admin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+    }).use(['index', 'table', 'jquery', 'siam'], function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+        var setter = layui.setter;
+        var admin = layui.admin;
+        var siam = layui.siam;
+        var roleName = {$role_name};
+
+        // 替换添加按钮链接
+        $("#add_btn").attr('lay-href', $("#add_btn").attr('lay-href').replace("__DO__", siam.get('u_id')));
+        $("#add_btn").attr('lay-href', $("#add_btn").attr('lay-href').replace("__TOKEN__", layui.data(setter.tableName)[setter.request.tokenName]));
+
+        table.render({
+            elem: '#mechanism_list'
+            , url: "{:url('api/user/get_list')}"
+            , where: {
+                access_token: layui.data(setter.tableName)[setter.request.tokenName]
+            }
+            , cols: [[
+                {field: 'u_id', title: '用户id', fixed: 'left', width: 100}
+                , {field: 'u_name', title: '用户名'}
+                , {
+                    field: 'role_id', title: '角色', templet: function (d) {
+                        // 角色id ,分割 显示标签名
+                        let tem = d.role_id.split(",");
+                        let html = '';
+                        $.each(tem, function (index, value) {
+                            if (value !== '' && value !== null) {
+                                html += '<span class="layui-badge layui-bg-blue">' + roleName[value] + '</span>  '
+                            }
+                        });
+                        return html;
+                    }
+                }
+                , {field: 'u_account', title: '登录账号'}
+                , {field: 'create_time', title: '添加时间'}
+                , {field: 'u_according', toolbar: '#do', width: 300}
+            ]]
+            , page: true
+            , response: {
+                statusCode: 200
+            }
+            , parseData: function (res) {
+                return {
+                    "code": res.code,
+                    "msg": res.msg,
+                    "count": res.data.info.count,
+                    "data": res.data.info.list
+                };
+            }
+        });
+
+
+        // 监听工具条
+        table.on('tool(user_list)', function (obj) {
+            var data = obj.data;
+            var layEvent = obj.event; //获得 lay-event 对应的值
+            var ticketcode = data.ticketcode;
+
+            switch (layEvent) {
+                // 下级用户列表
+                case 'userChild':
+                    var url = "{:url('user/childList', ['u_id' => '__UID__'])}";
+                    url = url.replace("__UID__", data.u_id);
+
+                    var text = data.u_name + '用户';
+                    //执行跳转
+                    var topLayui = parent === self ? layui : top.layui;
+                    topLayui.index.openTabsPage(url, text);
+                    break;
+
+                case 'del':
+                    layer.confirm('确认删除该用户?', {icon: 3, title: '提示'}, function (index) {
+                        admin.req({
+                            url: "{:url('api/user/del')}",
+                            data: {
+                                u_id: data.u_id
+                            },
+                            type: "post",
+                            dataType: "json",
+                            success: function (res) {
+                                if (res.code === '200') {
+                                    window.location.reload();
+                                } else {
+                                    layer.msg(res.msg, {
+                                        icon: 2
+                                    })
+                                }
+                            }
+                        });
+
+                        layer.close(index);
+                    });
+                    break;
+                case 'edit':
+                    var url = "{:url('user/edit', ['u_id' => '__UID__', 'u_name' => '__NAME__','do_uid' => '__DO__','access_token'=>'__TOKEN__'])}";
+                    url = url.replace("__UID__", data.u_id);
+                    url = url.replace("__NAME__", data.u_name);
+                    url = url.replace("__DO__", siam.get('u_id'));
+                    url = url.replace("__TOKEN__", layui.data(setter.tableName)[setter.request.tokenName]);
+                    // var text = data.u_name + '用户';
+                    // //执行跳转
+                    // var topLayui = parent === self ? layui : top.layui;
+                    // topLayui.index.openTabsPage(url, text);
+                    layer.open({
+                        type: 2,
+                        title: "{:lang('edi')}",
+                        content: url,
+                        area: ['70%', '90%']
+                    });
+                    break;
+                default:
+                    // layer.msg('未知操作');
+                    break;
+
+                case 'recharge':
+                    layer.prompt({
+                            formType: 0,
+                            title: '请输入充值的金额',
+                            type: 'tel',
+                            area: ['10%', '20%'],
+                        },
+                        function (value, index, elem) {
+                            // 充值用户的id
+                            var uId = data.u_id;
+                            // 检测输入的值是否为数字
+                            if (isNaN(value)) {
+                                layer.msg('充值金额只能是数字', {icon: 2});
+                                return false;
+                            }
+
+                            // 进行充值
+                            admin.req({
+                                url: "{:url('api/user/recharge')}",
+                                data: {
+                                    'u_id': uId,
+                                    'prices': value,
+                                },
+                                type: "POST",
+                                dataType: "json",
+                                success: function (res) {
+                                    if (res.code === '200') {
+                                        layer.msg(res.msg, {icon: 1});
+                                        setTimeout(function () {
+                                            layer.close(index);
+                                            window.location.reload();
+                                        }, 1000);
+                                    } else {
+                                        layer.msg(res.msg, {icon: 2});
+                                    }
+                                }
+                            })
+                        }
+                    );
+                    break;
+                case 'Reset_key':
+                    var uId = data.u_id;
+                    layer.confirm('确认重置用户的key,将会影响正在使用的用户!', {icon: 3, title: '提示'}, function (index) {
+                        admin.req({
+                            url: "{:url('api/user/resetKey')}",
+                            data: {
+                                uId: uId,
+                            },
+                            type: 'POST',
+                            dataType: "json",
+                            success: function (res) {
+                                if (res.code === '200') {
+                                    layer.msg(res.msg, {icon: 1});
+                                    // setTimeout(function () {
+                                    //     window.location.reload();
+                                    // }, 2000);
+                                } else {
+                                    layer.msg(res.msg, {icon: 2});
+                                }
+                            }
+                        });
+                    });
+                    break;
+            }
+        });
+        // 监听工具条结束
+    });
+</script>
+</body>
+
+</html>

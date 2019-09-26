@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{:lang('edi')}{:lang('user')}</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="__STATIC__/admin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="__STATIC__/admin/style/admin.css" media="all">
+
+    <link rel="stylesheet" href="__STATIC__/css/formSelects-v4.css" media="all">
+</head>
+<body>
+
+<div class="layui-input-normal layui-form" style="">
+    <div id="tranferDiv" cyType="transferTool" value="1111210000,1111340000"></div>
+</div>
+<div class="layui-fluid">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <!--<div class="layui-card-header">{:lang('edi')}</div>-->
+                <div class="layui-card-body" pad15>
+
+                    <div class="layui-form" lay-filter="user">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">{:lang('user_name')}</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="u_name" lay-verify="required" autocomplete="off"
+                                       class="layui-input">
+                            </div>
+                            <div class="layui-form-mid layui-word-aux"></div>
+                        </div>
+
+                        <div class="layui-form-item" style="display: none;">
+                            <label class="layui-form-label">uid</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="u_id" readonly lay-verify="required" autocomplete="off"
+                                       lass="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">{:lang('role')}</label>
+                            <div class="layui-input-block">
+                                <!--多角色-->
+                                {volist id="vo" name="role_list"}
+                                <input type="checkbox" name="role[{$vo.role_id}]" title="{$vo.role_name}"
+                                       lay-skin="primary" value="{$vo.role_id}">
+                                {/volist}
+                            </div>
+                            <div class="layui-form-mid layui-word-aux"></div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">{:lang('auth')}</label>
+                            <div class="layui-input-block" style="width: 70%;">
+                                <select name="u_auth" xm-select="select_auth" xm-select-search="">
+                                    {volist id="vo" name="auth_list"}
+                                    <option value="{$vo.auth_id}">{$vo.auth_name}</option>
+                                    {/volist}
+                                </select>
+                            </div>
+                            <div class="layui-form-mid layui-word-aux"></div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn" lay-submit lay-filter="ediuserinfo">立即提交</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码 -->
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">{:lang('password')}</div>
+                <div class="layui-card-body" pad15>
+
+                    <div class="layui-form" lay-filter="user">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">{:lang('old')}{:lang('password')}</label>
+                            <div class="layui-input-inline">
+                                <input type="password" name="password" lay-verify="required" autocomplete="off"
+                                       class="layui-input">
+                            </div>
+                            <div class="layui-form-mid layui-word-aux"></div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">{:lang('password')}</label>
+                            <div class="layui-input-inline">
+                                <input type="password" name="new_password" lay-verify="required" autocomplete="off"
+                                       class="layui-input">
+                            </div>
+                            <div class="layui-form-mid layui-word-aux"></div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn" lay-submit lay-filter="edi_password">立即提交</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--修改密码结束-->
+
+</div>
+
+<script src="__STATIC__/admin/layui/layui.js"></script>
+<script>
+
+    var formSelects = layui.formSelects;
+    layui.config({
+        base: '__STATIC__/admin/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index' //主入口模块
+        , formSelects: 'formSelects-v4'
+    }).use(['index', 'form', 'layer', 'jquery', 'formSelects'], function () {
+        var form = layui.form;
+        var layer = layui.layer;
+        var formSelects = layui.formSelects;
+        var admin = layui.admin;
+
+
+        // 初始化赋值
+        form.val("user", {
+            "u_id": "{$info.u_id}",
+            "u_name": "{$info.u_name}",
+        });
+        form.val("user", {$roleStr});
+        formSelects.value('select_auth', [{$info.u_auth
+    }],
+        true
+    )
+        ;
+
+        form.on('submit(ediuserinfo)', function (data) {
+            var load = layer.load(0, {
+                shade: 0.5
+            });
+            admin.req({
+                url: "{:url('Api/User/edi')}",
+                data: data.field,
+                type: "post",
+                dataType: "json",
+                success: function (res) {
+                    layer.close(load);
+                    if (res.code === '200') {
+                        layer.alert("SUCCESS");
+                        setTimeout(function () {
+                            parent.layer.closeAll();
+                        }, 2000)
+                    } else {
+                        layer.alert(res.msg);
+                    }
+                }
+            });
+            return false;
+        });
+
+        // 修改密码 提交
+        form.on('submit(edi_password)', function (data) {
+            var load = layer.load(0, {
+                shade: 0.5
+            });
+            admin.req({
+                url: "{:url('api/user/edi_pwd')}",
+                data: {
+                    'password': data.field.password,
+                    'new_password': data.field.new_password,
+                    'u_id': "{$info.u_id}",
+                },
+                type: "post",
+                dataType: "json",
+                success: function (res) {
+                    layer.close(load);
+                    if (res.code === '200') {
+                        layer.alert("SUCCESS", {
+                            yes: function () {
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        layer.alert(res.msg);
+                    }
+                }
+            });
+            return false;
+        });
+    });
+</script>
+</body>
+</html>

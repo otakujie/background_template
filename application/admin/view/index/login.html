@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>登入</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="__STATIC__/admin/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="__STATIC__/admin/style/admin.css" media="all">
+    <link rel="stylesheet" href="__STATIC__/admin/style/login.css" media="all">
+</head>
+
+<body>
+<div class="layadmin-user-login layadmin-user-display-show" id="LAY-user-login" style="display: none;">
+    <div class="layadmin-user-login-main">
+        <div class="layadmin-user-login-box layadmin-user-login-header">
+            <h2>{:config('app.login_title')}</h2>
+            <p>{:config('app.login_sec')}</p>
+        </div>
+        <div class="layadmin-user-login-box layadmin-user-login-body layui-form">
+            <div class="layui-form-item">
+                <label class="layadmin-user-login-icon layui-icon layui-icon-username"
+                       for="LAY-user-login-username"></label>
+                <input type="text" name="useraccount" id="LAY-user-login-username" lay-verify="required"
+                       placeholder="{:lang('user_account')}"
+                       class="layui-input" autocomplete="off"></div>
+            <div class="layui-form-item">
+                <label class="layadmin-user-login-icon layui-icon layui-icon-password"
+                       for="LAY-user-login-password"></label>
+                <input type="password" name="password" id="LAY-user-login-password" lay-verify="required"
+                       placeholder="{:lang('password')}" class="layui-input" autocomplete="off"></div>
+            <div class="layui-form-item">
+                <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="LAY-user-login-submit" id="subBtn">
+                    {:lang('login')}
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script src="__STATIC__/admin/layui/layui.js"></script>
+<script>layui.config({
+    base: '__STATIC__/admin/' //静态资源所在路径
+}).extend({
+    index: 'lib/index' //主入口模块
+}).use(['index', 'user', 'siam'],
+    function () {
+        var $ = layui.$
+            , setter = layui.setter
+            , admin = layui.admin
+            , siam = layui.siam,
+            form = layui.form;
+
+        form.render();
+
+        // 如果已经登陆 直接跳转
+        var exp = siam.get('exp');
+        if (exp !== null && (exp > Date.parse(new Date()) / 1000)) {
+            location.href = "{:url('admin/index/index')}"; //后台主页
+        }
+
+
+        // 监听回车提交
+        $("body").keydown(function () {
+            if (event.keyCode == "13") {
+                $('#subBtn').trigger('click');
+            }
+        });
+
+        //提交
+        form.on('submit(LAY-user-login-submit)',
+            function (obj) {
+                admin.req({
+                    url: "{:url('api/user/login')}",
+                    data: {
+                        useraccount: obj.field.useraccount,
+                        password: obj.field.password,
+                    },
+                    type: "post",
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.code === '200') {
+                            //请求成功后，写入 access_token
+                            layui.data(setter.tableName, {
+                                key: setter.request.tokenName
+                                , value: res.data.jwtData.token
+                            });
+
+                            //登入成功的提示与跳转
+                            layer.msg('登入成功', {
+                                offset: '15px'
+                                , icon: 1
+                                , time: 1000
+                            }, function () {
+                                // location.reload = ''; //后台主页
+                                // window.location.reload();//后台主页
+                                var url = "{:url('index')}";
+                                window.location.href = url;
+                            });
+                        } else {
+                            layer.msg(res.msg, {
+                                icon: 2
+                            })
+                        }
+                    }
+
+                });
+
+            });
+
+    });</script>
+</body>
+
+</html>

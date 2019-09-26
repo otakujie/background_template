@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0,user-scalable=no"/>
+    <title>交易记录</title>
+    <link rel="stylesheet" href="__STATIC__/index/layui/css/layui.css" media="all">
+    <link rel="stylesheet" href="__STATIC__/index/style/admin.css" media="all">
+</head>
+<style>
+    li {
+        display: block;
+        background-color: #FFFFFF;
+        width: 93%;
+        margin: auto;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    li div {
+        width: 95%;
+        margin: auto;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        font-size: 1.2em;
+    }
+
+    .left {
+    }
+
+    .right {
+        float: right;
+    }
+
+    .img {
+        display: block;
+        width: 60%;
+        margin: 22%;
+    }
+
+    .text {
+        text-align: center;
+        display: block;
+    }
+</style>
+<body>
+<ul class="flow-default" id="order_flow"></ul>
+</body>
+<script src="https://cdn.bootcss.com/jquery/3.4.0/jquery.min.js"></script>
+<script src="__STATIC__/index/layui/layui.js"></script>
+<script>
+    layui.config({
+        base: '__STATIC__/index/' //静态资源所在路径
+    }).extend({
+        index: 'lib/index', //主入口模块
+        formSelects: 'formSelects-v4'
+    }).use(['index', 'flow'], function () {
+        var $ = layui.$;
+        var flow = layui.flow;
+
+        var identification = '{$identification}';
+
+        // 订单信息流加载
+        flow.load({
+            elem: '#order_flow' //流加载容器
+            , done: function (page, next) { //执行下一页的回调
+                // ajax请求正在进行的订单数据
+                var limit = 10;
+                $.ajax({
+                    url: "{:url('battery_bill/lists')}",
+                    data: {
+                        'identification': identification,
+                        'page': page,
+                        'limit': limit,
+                        'orderData': 'transaction',
+                    },
+                    type: "POST",
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.code === '200') {
+                            //模拟数据插入
+                            setTimeout(function () {
+                                var lis = [];
+                                for (var i = 0; i < res.data.info.lists.length; i++) {
+                                    var value = res.data.info.lists[i];
+
+                                    lis.push('<li>');
+                                    lis.push('<div><span class="left">借出机器名称:</span><span class="right">' + value.b_name + '</span></div>');
+                                    // 判断交易状态
+                                    switch (value.b_mid) {
+                                        case 0:
+                                            lis.push('<div><span class="left">交易状态:</span><span class="right">已付款</span></div>');
+                                            break;
+                                        case 1:
+                                            lis.push('<div><span class="left">交易状态:</span><span class="right">已借出</span></div>');
+                                            break;
+                                        case 2:
+                                            lis.push('<div><span class="left">交易状态:</span><span class="right">已归还</span></div>');
+                                            break;
+                                    }
+                                    lis.push('<div><span class="left">扣款金额:</span><span class="right">' + (value.r_prices) / 100 + '元</span></div>');
+                                    lis.push('<div><span class="left">退还金额:</span><span class="right">' + (value.b_prices - value.r_prices) / 100 + '元</span></div>');
+                                    lis.push('<div><span class="left">归还机器名称:</span><span class="right">' + value.r_name + '</span></div>');
+                                    lis.push('<div><span class="left">借出时间:</span><span class="right">' + value.out_time + '</span></div>');
+                                    lis.push('<div><span class="left">归还时间:</span><span class="right">' + value.return_time + '</span></div>');
+                                    lis.push('</li>');
+
+                                }
+
+                                //执行下一页渲染，第二参数为：满足“加载更多”的条件，即后面仍有分页
+                                //pages为Ajax返回的总页数，只有当前页小于总页数的情况下，才会继续出现加载更多
+                                next(lis.join(''), page < (res.data.info.count / limit)); //假设总页数为 10
+                            }, 500);
+                        } else {
+                            var html = '';
+                            html += '<div>';
+                            html += '<img class="img" src="__STATIC__/images/order.png" />';
+                            html += '<text class="text">' + res.msg + '</text>';
+                            html += '</div>';
+
+                            $('#order_flow').html(html);
+                        }
+                    }
+                });
+            }
+        });
+    });
+</script>
+</html>
